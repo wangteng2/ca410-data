@@ -28,9 +28,9 @@
             <thead>
                 <tr>
                     <th>时间</th>
-                    <th>X</th>
-                    <th>Y</th>
-                    <th>Z</th>
+                    <th>Lv (cd/m²)</th>
+                    <th>sx</th>
+                    <th>sy</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -45,44 +45,71 @@
             .then(data => {
                 // 准备图表数据
                 const timestamps = data.map(item => item.timestamp);
-                const xValues = data.map(item => item.X);
-                const yValues = data.map(item => item.Y);
-                const zValues = data.map(item => item.Z);
+                const lvValues = data.map(item => item.Lv);
+                const sxValues = data.map(item => item.sx);
+                const syValues = data.map(item => item.sy);
 
                 // 配置图表
                 const chart = echarts.init(document.getElementById('lineChart'));
                 const option = {
                     title: {
-                        text: 'XYZ值变化趋势'
+                        text: 'CA410测量结果趋势'
                     },
                     tooltip: {
-                        trigger: 'axis'
+                        trigger: 'axis',
+                        formatter: function(params) {
+                            let result = params[0].axisValue + '<br/>';
+                            params.forEach(param => {
+                                let value = param.value;
+                                if(param.seriesName === 'Lv') {
+                                    value = value.toFixed(2) + ' cd/m²';
+                                } else {
+                                    value = value.toFixed(4);
+                                }
+                                result += param.seriesName + ': ' + value + '<br/>';
+                            });
+                            return result;
+                        }
                     },
                     legend: {
-                        data: ['X', 'Y', 'Z']
+                        data: ['Lv', 'sx', 'sy']
                     },
                     xAxis: {
                         type: 'category',
                         data: timestamps
                     },
-                    yAxis: {
-                        type: 'value'
-                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: 'Lv (cd/m²)',
+                            position: 'left'
+                        },
+                        {
+                            type: 'value',
+                            name: 'sx/sy',
+                            position: 'right',
+                            min: 0,
+                            max: 1
+                        }
+                    ],
                     series: [
                         {
-                            name: 'X',
+                            name: 'Lv',
                             type: 'line',
-                            data: xValues
+                            data: lvValues,
+                            yAxisIndex: 0
                         },
                         {
-                            name: 'Y',
+                            name: 'sx',
                             type: 'line',
-                            data: yValues
+                            data: sxValues,
+                            yAxisIndex: 1
                         },
                         {
-                            name: 'Z',
+                            name: 'sy',
                             type: 'line',
-                            data: zValues
+                            data: syValues,
+                            yAxisIndex: 1
                         }
                     ]
                 };
@@ -94,9 +121,9 @@
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${item.timestamp}</td>
-                        <td>${item.X.toFixed(3)}</td>
-                        <td>${item.Y.toFixed(3)}</td>
-                        <td>${item.Z.toFixed(3)}</td>
+                        <td>${item.Lv.toFixed(2)}</td>
+                        <td>${item.sx.toFixed(4)}</td>
+                        <td>${item.sy.toFixed(4)}</td>
                     `;
                     tableBody.appendChild(row);
                 });
