@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CA410测量数据</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .chart { width: 100%; height: 400px; margin: 20px 0; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th, .data-table td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        .data-table th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CA410测量数据可视化</h1>
+        
+        <!-- 图表容器 -->
+        <div id="lineChart" class="chart"></div>
+        
+        <!-- 数据表格 -->
+        <table class="data-table" id="dataTable">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>X</th>
+                    <th>Y</th>
+                    <th>Z</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 加载数据并绘制图表
+        fetch('measurements.json')
+            .then(response => response.json())
+            .then(data => {
+                // 准备图表数据
+                const timestamps = data.map(item => item.timestamp);
+                const xValues = data.map(item => item.X);
+                const yValues = data.map(item => item.Y);
+                const zValues = data.map(item => item.Z);
+
+                // 配置图表
+                const chart = echarts.init(document.getElementById('lineChart'));
+                const option = {
+                    title: {
+                        text: 'XYZ值变化趋势'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['X', 'Y', 'Z']
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: timestamps
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: [
+                        {
+                            name: 'X',
+                            type: 'line',
+                            data: xValues
+                        },
+                        {
+                            name: 'Y',
+                            type: 'line',
+                            data: yValues
+                        },
+                        {
+                            name: 'Z',
+                            type: 'line',
+                            data: zValues
+                        }
+                    ]
+                };
+                chart.setOption(option);
+
+                // 填充表格
+                const tableBody = document.getElementById('tableBody');
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.timestamp}</td>
+                        <td>${item.X.toFixed(3)}</td>
+                        <td>${item.Y.toFixed(3)}</td>
+                        <td>${item.Z.toFixed(3)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => console.error('Error loading data:', error));
+    </script>
+</body>
+</html>
