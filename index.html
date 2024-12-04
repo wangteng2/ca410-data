@@ -39,22 +39,27 @@
     </div>
 
     <script>
-        // 从本地JSON文件加载数据
-        fetch('./measurements.json')
-            .then(response => {
-                console.log('响应状态:', response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP 错误! 状态: ${response.status}`);
-                }
-                return response.json();
-            })
+        fetch('/measurements.json')
+            .then(response => response.json())
             .then(data => {
-                console.log('加载的数据:', data);
-                if (!Array.isArray(data) || data.length === 0) {
-                    throw new Error('数据格式不正确或为空');
-                }
+                // 过滤掉无效数据和重复数据
+                const validData = data.filter(item => 
+                    item && 
+                    item.Lv > 0 &&  // 过滤掉 Lv 为 0 的数据
+                    item.sx > 0 &&   // 过滤掉 sx 为 0 的数据
+                    item.sy > 0      // 过滤掉 sy 为 0 的数据
+                );
+
+                // 去重：根据时间戳去重
+                const uniqueData = Array.from(new Map(
+                    validData.map(item => [item.timestamp, item])
+                ).values());
+
+                // 按时间排序
+                uniqueData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
                 // 准备图表数据
-                const timestamps = data.map(item => {
+                const timestamps = uniqueData.map(item => {
                     const [date, time] = item.timestamp.split(' ');
                     return {
                         value: item.timestamp,
@@ -63,11 +68,11 @@
                         }
                     };
                 });
-                const lvValues = data.map(item => item.Lv);
-                const sxValues = data.map(item => item.sx);
-                const syValues = data.map(item => item.sy);
+                const lvValues = uniqueData.map(item => item.Lv);
+                const sxValues = uniqueData.map(item => item.sx);
+                const syValues = uniqueData.map(item => item.sy);
 
-                // Lv和色度图表
+                // 配置图表
                 const lvChart = echarts.init(document.getElementById('lvChart'));
                 const option = {
                     title: {
@@ -92,54 +97,28 @@
                     legend: {
                         data: ['Lv', 'sx', 'sy']
                     },
-                    grid: {
-                        right: '10%',
-                        bottom: '15%'  // 增加底部空间以显示两行时间
-                    },
                     xAxis: {
                         type: 'category',
-                        data: timestamps.map(item => item.value),
+                        data: timestamps,
                         axisLabel: {
-                            rotate: 0,
-                            formatter: function (value) {
-                                const [date, time] = value.split(' ');
-                                return date + '\n' + time;
-                            },
-                            interval: 0,
-                            lineHeight: 14,
-                            padding: [5, 0, 0, 0]
-                        },
-                        axisLine: {
-                            onZero: false
-                        },
-                        axisTick: {
-                            alignWithLabel: true
+                            rotate: 45,
+                            formatter: function(value) {
+                                return value.split(' ')[1];  // 只显示时间部分
+                            }
                         }
                     },
                     yAxis: [
                         {
                             type: 'value',
                             name: 'Lv (cd/m²)',
-                            position: 'left',
-                            axisLine: {
-                                show: true,
-                                lineStyle: {
-                                    color: '#5470C6'
-                                }
-                            }
+                            position: 'left'
                         },
                         {
                             type: 'value',
                             name: 'sx/sy',
                             position: 'right',
-                            min: 0,
-                            max: 1,
-                            axisLine: {
-                                show: true,
-                                lineStyle: {
-                                    color: '#91CC75'
-                                }
-                            }
+                            min: 0.3,
+                            max: 0.4
                         }
                     ],
                     series: [
@@ -147,28 +126,19 @@
                             name: 'Lv',
                             type: 'line',
                             data: lvValues,
-                            yAxisIndex: 0,
-                            itemStyle: {
-                                color: '#5470C6'
-                            }
+                            yAxisIndex: 0
                         },
                         {
                             name: 'sx',
                             type: 'line',
                             data: sxValues,
-                            yAxisIndex: 1,
-                            itemStyle: {
-                                color: '#91CC75'
-                            }
+                            yAxisIndex: 1
                         },
                         {
                             name: 'sy',
                             type: 'line',
                             data: syValues,
-                            yAxisIndex: 1,
-                            itemStyle: {
-                                color: '#FAC858'
-                            }
+                            yAxisIndex: 1
                         }
                     ]
                 };
@@ -176,7 +146,7 @@
 
                 // 填充表格
                 const tableBody = document.getElementById('tableBody');
-                data.forEach(item => {
+                uniqueData.forEach(item => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${item.timestamp}</td>
@@ -188,8 +158,7 @@
                 });
             })
             .catch(error => {
-                console.error('错误详情:', error);
-                // 在页面上显示错误信息
+                console.error('数据加载失败:', error);
                 document.querySelector('.container').innerHTML += `
                     <div style="color: red; margin-top: 20px;">
                         数据加载失败: ${error.message}
