@@ -14,16 +14,27 @@
             text-align: left; 
         }
         .data-table th { background-color: #f4f4f4; }
+        .refresh-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .refresh-button:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>CA410测量数据可视化</h1>
+        <button class="refresh-button" onclick="location.reload(true)">刷新数据</button>
         
-        <!-- 图表容器 -->
         <div id="lvChart" class="chart"></div>
         
-        <!-- 数据表格 -->
         <table class="data-table" id="dataTable">
             <thead>
                 <tr>
@@ -39,128 +50,135 @@
     </div>
 
     <script>
-        fetch('measurements.json')
-            .then(response => response.json())
-            .then(data => {
-                const validData = data.filter(item => 
-                    item && 
-                    item.Lv > 0 &&  
-                    item.sx > 0 &&   
-                    item.sy > 0      
-                );
+        fetch('./measurements.json', {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const validData = data.filter(item => 
+                item && 
+                item.Lv > 0 &&
+                item.sx > 0 &&
+                item.sy > 0
+            );
 
-                const uniqueData = Array.from(new Map(
-                    validData.map(item => [item.timestamp, item])
-                ).values());
+            const uniqueData = Array.from(new Map(
+                validData.map(item => [item.timestamp, item])
+            ).values());
 
-                uniqueData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            uniqueData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                const last30Data = uniqueData.slice(-30);
+            const last30Data = uniqueData.slice(-30);
 
-                const timestamps = last30Data.map(item => {
-                    const [date, time] = item.timestamp.split(' ');
-                    return {
-                        value: item.timestamp,
-                        label: {
-                            formatter: [date, time].join('\n')
-                        }
-                    };
-                });
-                const lvValues = last30Data.map(item => item.Lv);
-                const sxValues = last30Data.map(item => item.sx);
-                const syValues = last30Data.map(item => item.sy);
-
-                const lvChart = echarts.init(document.getElementById('lvChart'));
-                const option = {
-                    title: {
-                        text: 'CA410测量结果趋势'
-                    },
-                    tooltip: {
-                        trigger: 'axis',
-                        formatter: function(params) {
-                            let result = params[0].name + '<br/>';
-                            params.forEach(param => {
-                                let value = param.value;
-                                if(param.seriesName === 'Lv') {
-                                    value = value.toFixed(2) + ' cd/m²';
-                                } else {
-                                    value = value.toFixed(4);
-                                }
-                                result += param.seriesName + ': ' + value + '<br/>';
-                            });
-                            return result;
-                        }
-                    },
-                    legend: {
-                        data: ['Lv', 'sx', 'sy']
-                    },
-                    xAxis: {
-                        type: 'category',
-                        data: timestamps,
-                        axisLabel: {
-                            rotate: 45,
-                            formatter: function(value) {
-                                return value.split(' ')[1];  
-                            }
-                        }
-                    },
-                    yAxis: [
-                        {
-                            type: 'value',
-                            name: 'Lv (cd/m²)',
-                            position: 'left'
-                        },
-                        {
-                            type: 'value',
-                            name: 'sx/sy',
-                            position: 'right',
-                            min: 0.3,
-                            max: 0.4
-                        }
-                    ],
-                    series: [
-                        {
-                            name: 'Lv',
-                            type: 'line',
-                            data: lvValues,
-                            yAxisIndex: 0
-                        },
-                        {
-                            name: 'sx',
-                            type: 'line',
-                            data: sxValues,
-                            yAxisIndex: 1
-                        },
-                        {
-                            name: 'sy',
-                            type: 'line',
-                            data: syValues,
-                            yAxisIndex: 1
-                        }
-                    ]
+            const timestamps = last30Data.map(item => {
+                const [date, time] = item.timestamp.split(' ');
+                return {
+                    value: item.timestamp,
+                    label: {
+                        formatter: [date, time].join('\n')
+                    }
                 };
-                lvChart.setOption(option);
-
-                const tableBody = document.getElementById('tableBody');
-                last30Data.forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.timestamp}</td>
-                        <td>${item.Lv.toFixed(2)}</td>
-                        <td>${item.sx.toFixed(4)}</td>
-                        <td>${item.sy.toFixed(4)}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            })
-            .catch(error => {
-                console.error('数据加载失败:', error);
-                document.querySelector('.container').innerHTML += `
-                    <div style="color: red; margin-top: 20px;">
-                        数据加载失败: ${error.message}
-                    </div>
-                `;
             });
+            const lvValues = last30Data.map(item => item.Lv);
+            const sxValues = last30Data.map(item => item.sx);
+            const syValues = last30Data.map(item => item.sy);
+
+            const lvChart = echarts.init(document.getElementById('lvChart'));
+            const option = {
+                title: {
+                    text: 'CA410测量结果趋势'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        let result = params[0].name + '<br/>';
+                        params.forEach(param => {
+                            let value = param.value;
+                            if(param.seriesName === 'Lv') {
+                                value = value.toFixed(2) + ' cd/m²';
+                            } else {
+                                value = value.toFixed(4);
+                            }
+                            result += param.seriesName + ': ' + value + '<br/>';
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['Lv', 'sx', 'sy']
+                },
+                xAxis: {
+                    type: 'category',
+                    data: timestamps,
+                    axisLabel: {
+                        rotate: 45,
+                        formatter: function(value) {
+                            return value.split(' ')[1];
+                        }
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: 'Lv (cd/m²)',
+                        position: 'left'
+                    },
+                    {
+                        type: 'value',
+                        name: 'sx/sy',
+                        position: 'right',
+                        min: 0.3,
+                        max: 0.4
+                    }
+                ],
+                series: [
+                    {
+                        name: 'Lv',
+                        type: 'line',
+                        data: lvValues,
+                        yAxisIndex: 0
+                    },
+                    {
+                        name: 'sx',
+                        type: 'line',
+                        data: sxValues,
+                        yAxisIndex: 1
+                    },
+                    {
+                        name: 'sy',
+                        type: 'line',
+                        data: syValues,
+                        yAxisIndex: 1
+                    }
+                ]
+            };
+            lvChart.setOption(option);
+
+            const tableBody = document.getElementById('tableBody');
+            last30Data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.timestamp}</td>
+                    <td>${item.Lv.toFixed(2)}</td>
+                    <td>${item.sx.toFixed(4)}</td>
+                    <td>${item.sy.toFixed(4)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('数据加载失败:', error);
+            document.querySelector('.container').innerHTML += `
+                <div style="color: red; margin-top: 20px;">
+                    数据加载失败: ${error.message}
+                </div>
+            `;
+        });
     </script>
 </body>
 </html>
