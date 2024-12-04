@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>CA410测量数据</title>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -43,80 +43,129 @@
     </div>
 
     <script>
-        google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChart);
+        let myChart = null;
 
-        function drawChart() {
-            fetch('./measurements.json')
-                .then(response => response.json())
-                .then(data => {
-                    const dataTable = new google.visualization.DataTable();
-                    dataTable.addColumn('string', '时间');
-                    dataTable.addColumn('number', 'Lv (cd/m²)');
-                    dataTable.addColumn('number', 'sx');
-                    dataTable.addColumn('number', 'sy');
-
-                    const rows = data.map(item => [
-                        item.timestamp,
-                        item.Lv,
-                        item.sx,
-                        item.sy
-                    ]);
-
-                    dataTable.addRows(rows);
-
-                    const options = {
-                        title: 'CA410测量结果趋势',
-                        curveType: 'function',
-                        legend: { position: 'bottom' },
-                        series: {
-                            0: {targetAxisIndex: 0},
-                            1: {targetAxisIndex: 1},
-                            2: {targetAxisIndex: 1}
-                        },
-                        vAxes: {
-                            0: {
-                                title: 'Lv (cd/m²)',
-                                textStyle: {color: '#5470C6'}
-                            },
-                            1: {
-                                title: 'sx/sy',
-                                viewWindow: {min: 0, max: 1},
-                                textStyle: {color: '#91CC75'}
+        function initChart(data) {
+            if (myChart) {
+                myChart.dispose();
+            }
+            myChart = echarts.init(document.getElementById('chart_div'));
+            
+            const option = {
+                title: {
+                    text: 'CA410测量结果趋势'
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: ['Lv', 'sx', 'sy'],
+                    bottom: 0
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '10%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: data.map(item => item.timestamp),
+                    axisLabel: {
+                        rotate: 45
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: 'Lv (cd/m²)',
+                        position: 'left',
+                        axisLine: {
+                            show: true,
+                            lineStyle: {
+                                color: '#5470C6'
                             }
                         },
-                        colors: ['#5470C6', '#91CC75', '#FAC858'],
-                        hAxis: {
-                            slantedText: true,
-                            slantedTextAngle: 45
+                        axisLabel: {
+                            formatter: '{value}'
                         }
-                    };
+                    },
+                    {
+                        type: 'value',
+                        name: 'sx/sy',
+                        min: 0,
+                        max: 1,
+                        position: 'right',
+                        axisLine: {
+                            show: true,
+                            lineStyle: {
+                                color: '#91CC75'
+                            }
+                        }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'Lv',
+                        type: 'line',
+                        yAxisIndex: 0,
+                        data: data.map(item => item.Lv),
+                        itemStyle: {
+                            color: '#5470C6'
+                        }
+                    },
+                    {
+                        name: 'sx',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: data.map(item => item.sx),
+                        itemStyle: {
+                            color: '#91CC75'
+                        }
+                    },
+                    {
+                        name: 'sy',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: data.map(item => item.sy),
+                        itemStyle: {
+                            color: '#FAC858'
+                        }
+                    }
+                ]
+            };
 
-                    const chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-                    chart.draw(dataTable, options);
-
-                    // 填充表格数据
-                    const tableBody = document.getElementById('tableBody');
-                    data.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.timestamp}</td>
-                            <td>${item.Lv.toFixed(2)}</td>
-                            <td>${item.sx.toFixed(4)}</td>
-                            <td>${item.sy.toFixed(4)}</td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading data:', error);
-                    document.getElementById('tableBody').innerHTML = 
-                        '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
-                });
+            myChart.setOption(option);
         }
 
-        // 响应窗口大小变化
-        window.addEventListener('resize', drawChart);
+        fetch('./measurements.json')
+            .then(response => response.json())
+            .then(data => {
+                initChart(data);
+
+                const tableBody = document.getElementById('tableBody');
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.timestamp}</td>
+                        <td>${item.Lv.toFixed(2)}</td>
+                        <td>${item.sx.toFixed(4)}</td>
+                        <td>${item.sy.toFixed(4)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('tableBody').innerHTML = 
+                    '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
+            });
+
+        window.addEventListener('resize', () => {
+            if (myChart) {
+                myChart.resize();
+            }
+        });
     </script>
 </body>
 </html>
