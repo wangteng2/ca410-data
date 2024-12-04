@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>CA410测量数据</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -14,27 +14,21 @@
             text-align: left; 
         }
         .data-table th { background-color: #f4f4f4; }
-        .refresh-button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-        .refresh-button:hover {
-            background-color: #45a049;
-        }
+        #lvChart {
+           min-height: 400px;
+           width: 100%;
+           height: 100%;
+       }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>CA410测量数据可视化</h1>
-        <button class="refresh-button" onclick="refreshData()">刷新数据</button>
         
+        <!-- 图表容器 -->
         <div id="lvChart" class="chart"></div>
         
+        <!-- 数据表格 -->
         <table class="data-table" id="dataTable">
             <thead>
                 <tr>
@@ -50,64 +44,10 @@
     </div>
 
     <script>
-        let lvChart = null;
-
-        function initChart() {
-            if (lvChart) {
-                lvChart.dispose();
-            }
-            lvChart = echarts.init(document.getElementById('lvChart'));
-        }
-
-        function loadData() {
-            fetch('measurements.json', {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.text().then(text => {
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        console.error('JSON解析错误:', e);
-                        console.log('收到的原始数据:', text);
-                        throw new Error('JSON解析失败: ' + e.message);
-                    }
-                });
-            })
+        fetch('/measurements.json')
+            .then(response => response.json())
             .then(data => {
-                if (!Array.isArray(data)) {
-                    console.error('数据格式错误:', data);
-                    throw new Error('数据格式错误: 预期是数组');
-                }
-
-                const validData = data.filter(item => 
-                    item && 
-                    item.Lv > 0 &&
-                    item.sx > 0 &&
-                    item.sy > 0
-                );
-
-                if (validData.length === 0) {
-                    throw new Error('没有有效数据');
-                }
-
-                const uniqueData = Array.from(new Map(
-                    validData.map(item => [item.timestamp, item])
-                ).values());
-
-                uniqueData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                const last30Data = uniqueData.slice(-30);
-
-                const timestamps = last30Data.map(item => {
+                const timestamps = data.map(item => {
                     const [date, time] = item.timestamp.split(' ');
                     return {
                         value: item.timestamp,
@@ -116,14 +56,20 @@
                         }
                     };
                 });
-                const lvValues = last30Data.map(item => item.Lv);
-                const sxValues = last30Data.map(item => item.sx);
-                const syValues = last30Data.map(item => item.sy);
+                const lvValues = data.map(item => item.Lv);
+                const sxValues = data.map(item => item.sx);
+                const syValues = data.map(item => item.sy);
+                try {
+                   const lvChart = echarts.init(document.getElementById('lvChart'));
+                   lvChart.setOption(option);
 
-                initChart();
-                
+                   window.addEventListener('resize', function() {
+                   lvChart.resize();
+                   });
+               } catch (error) {
+               console.error('Chart initialization error:', error);
+               }
                 const option = {
-                    animation: false,
                     title: {
                         text: 'CA410测量结果趋势'
                     },
@@ -146,28 +92,47 @@
                     legend: {
                         data: ['Lv', 'sx', 'sy']
                     },
+                    grid: {
+                        right: '10%',
+                        bottom: '15%' 
+                    },
                     xAxis: {
                         type: 'category',
-                        data: timestamps,
+                        data: timestamps.map(item => item.value),
                         axisLabel: {
-                            rotate: 45,
-                            formatter: function(value) {
-                                return value.split(' ')[1];
-                            }
+                            formatter: function (value) {
+                                const [date, time] = value.split(' ');
+                                return date + '\n' + time;
+                            },
+                            interval: 0,
+                            lineHeight: 14,
+                            padding: [5, 0, 0, 0]
                         }
                     },
                     yAxis: [
                         {
                             type: 'value',
                             name: 'Lv (cd/m²)',
-                            position: 'left'
+                            position: 'left',
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#5470C6'
+                                }
+                            }
                         },
                         {
                             type: 'value',
                             name: 'sx/sy',
                             position: 'right',
-                            min: 0.3,
-                            max: 0.4
+                            min: 0,
+                            max: 1,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#91CC75'
+                                }
+                            }
                         }
                     ],
                     series: [
@@ -175,27 +140,34 @@
                             name: 'Lv',
                             type: 'line',
                             data: lvValues,
-                            yAxisIndex: 0
+                            yAxisIndex: 0,
+                            itemStyle: {
+                                color: '#5470C6'
+                            }
                         },
                         {
                             name: 'sx',
                             type: 'line',
                             data: sxValues,
-                            yAxisIndex: 1
+                            yAxisIndex: 1,
+                            itemStyle: {
+                                color: '#91CC75'
+                            }
                         },
                         {
                             name: 'sy',
                             type: 'line',
                             data: syValues,
-                            yAxisIndex: 1
+                            yAxisIndex: 1,
+                            itemStyle: {
+                                color: '#FAC858'
+                            }
                         }
                     ]
                 };
                 lvChart.setOption(option);
-
                 const tableBody = document.getElementById('tableBody');
-                tableBody.innerHTML = '';
-                last30Data.forEach(item => {
+                data.forEach(item => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${item.timestamp}</td>
@@ -207,22 +179,9 @@
                 });
             })
             .catch(error => {
-                console.error('数据加载失败:', error);
-                const errorDiv = document.createElement('div');
-                errorDiv.style.color = 'red';
-                errorDiv.style.marginTop = '20px';
-                errorDiv.textContent = `数据加载失败: ${error.message}`;
-                document.querySelector('.container').appendChild(errorDiv);
+                console.error('Error loading data:', error);
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
             });
-        }
-
-        function refreshData() {
-            const errorDivs = document.querySelectorAll('.container div[style*="color: red"]');
-            errorDivs.forEach(div => div.remove());
-            loadData();
-        }
-
-        window.addEventListener('load', loadData);
     </script>
 </body>
 </html>
