@@ -2,11 +2,16 @@
 <html>
 <head>
     <title>CA410测量数据</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-        .chart { width: 100%; height: 400px; margin: 20px 0; }
+        .chart-container { 
+            width: 100%; 
+            height: 400px; 
+            margin: 20px 0; 
+            position: relative;
+        }
         .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .data-table th, .data-table td { 
             border: 1px solid #ddd; 
@@ -14,11 +19,6 @@
             text-align: left; 
         }
         .data-table th { background-color: #f4f4f4; }
-        #lvChart {
-           min-height: 400px;
-           width: 100%;
-           height: 100%;
-        }
     </style>
 </head>
 <body>
@@ -26,7 +26,9 @@
         <h1>CA410测量数据可视化</h1>
         
         <!-- 图表容器 -->
-        <div id="lvChart" class="chart"></div>
+        <div class="chart-container">
+            <canvas id="measurementChart"></canvas>
+        </div>
         
         <!-- 数据表格 -->
         <table class="data-table" id="dataTable">
@@ -44,119 +46,84 @@
     </div>
 
     <script>
-        fetch('measurements.json')
+        fetch('/measurements.json')
             .then(response => response.json())
             .then(data => {
-                const timestamps = data.map(item => {
-                    const [date, time] = item.timestamp.split(' ');
-                    return {
-                        value: item.timestamp,
-                        label: {
-                            formatter: [date, time].join('\n')
-                        }
-                    };
-                });
+                const timestamps = data.map(item => item.timestamp);
                 const lvValues = data.map(item => item.Lv);
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
-                const lvChart = echarts.init(document.getElementById('lvChart'));
-                const option = {
-                    title: {
-                        text: 'CA410测量结果趋势'
-                    },
-                    tooltip: {
-                        trigger: 'axis',
-                        formatter: function(params) {
-                            let result = params[0].name + '<br/>';
-                            params.forEach(param => {
-                                let value = param.value;
-                                if(param.seriesName === 'Lv') {
-                                    value = value.toFixed(2) + ' cd/m²';
-                                } else {
-                                    value = value.toFixed(4);
-                                }
-                                result += param.seriesName + ': ' + value + '<br/>';
-                            });
-                            return result;
-                        }
-                    },
-                    legend: {
-                        data: ['Lv', 'sx', 'sy']
-                    },
-                    grid: {
-                        right: '10%',
-                        bottom: '15%' 
-                    },
-                    xAxis: {
-                        type: 'category',
-                        data: timestamps.map(item => item.value),
-                        axisLabel: {
-                            formatter: function (value) {
-                                const [date, time] = value.split(' ');
-                                return date + '\n' + time;
+
+                const ctx = document.getElementById('measurementChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timestamps,
+                        datasets: [
+                            {
+                                label: 'Lv (cd/m²)',
+                                data: lvValues,
+                                borderColor: '#5470C6',
+                                yAxisID: 'y',
+                                tension: 0.1
                             },
-                            interval: 0,
-                            lineHeight: 14,
-                            padding: [5, 0, 0, 0]
-                        }
+                            {
+                                label: 'sx',
+                                data: sxValues,
+                                borderColor: '#91CC75',
+                                yAxisID: 'y1',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'sy',
+                                data: syValues,
+                                borderColor: '#FAC858',
+                                yAxisID: 'y1',
+                                tension: 0.1
+                            }
+                        ]
                     },
-                    yAxis: [
-                        {
-                            type: 'value',
-                            name: 'Lv (cd/m²)',
-                            position: 'left',
-                            axisLine: {
-                                show: true,
-                                lineStyle: {
-                                    color: '#5470C6'
-                                }
-                            }
+                    options: {
+                        responsive: true,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
                         },
-                        {
-                            type: 'value',
-                            name: 'sx/sy',
-                            position: 'right',
-                            min: 0,
-                            max: 1,
-                            axisLine: {
-                                show: true,
-                                lineStyle: {
-                                    color: '#91CC75'
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Lv (cd/m²)'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                min: 0,
+                                max: 1,
+                                title: {
+                                    display: true,
+                                    text: 'sx/sy'
+                                },
+                                grid: {
+                                    drawOnChartArea: false
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
                                 }
                             }
                         }
-                    ],
-                    series: [
-                        {
-                            name: 'Lv',
-                            type: 'line',
-                            data: lvValues,
-                            yAxisIndex: 0,
-                            itemStyle: {
-                                color: '#5470C6'
-                            }
-                        },
-                        {
-                            name: 'sx',
-                            type: 'line',
-                            data: sxValues,
-                            yAxisIndex: 1,
-                            itemStyle: {
-                                color: '#91CC75'
-                            }
-                        },
-                        {
-                            name: 'sy',
-                            type: 'line',
-                            data: syValues,
-                            yAxisIndex: 1,
-                            itemStyle: {
-                                color: '#FAC858'
-                            }
-                        }
-                    ]
-                };
-                lvChart.setOption(option);
+                    }
+                });
+
+                // 填充表格数据
                 const tableBody = document.getElementById('tableBody');
                 data.forEach(item => {
                     const row = document.createElement('tr');
@@ -171,7 +138,8 @@
             })
             .catch(error => {
                 console.error('Error loading data:', error);
-                document.getElementById('tableBody').innerHTML = '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
+                document.getElementById('tableBody').innerHTML = 
+                    '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
             });
     </script>
 </body>
