@@ -39,7 +39,7 @@
     </div>
 
     <script>
-        fetch('measurements.json')
+        fetch('./measurements.json')
             .then(response => response.json())
             .then(data => {
                 const validData = data.filter(item => 
@@ -48,13 +48,16 @@
                     item.sx > 0 &&   
                     item.sy > 0      
                 );
+
                 const uniqueData = Array.from(new Map(
                     validData.map(item => [item.timestamp, item])
                 ).values());
 
                 uniqueData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                const timestamps = uniqueData.map(item => {
+                const last30Data = uniqueData.slice(-30);
+
+                const timestamps = last30Data.map(item => {
                     const [date, time] = item.timestamp.split(' ');
                     return {
                         value: item.timestamp,
@@ -63,9 +66,9 @@
                         }
                     };
                 });
-                const lvValues = uniqueData.map(item => item.Lv);
-                const sxValues = uniqueData.map(item => item.sx);
-                const syValues = uniqueData.map(item => item.sy);
+                const lvValues = last30Data.map(item => item.Lv);
+                const sxValues = last30Data.map(item => item.sx);
+                const syValues = last30Data.map(item => item.sy);
 
                 const lvChart = echarts.init(document.getElementById('lvChart'));
                 const option = {
@@ -97,7 +100,7 @@
                         axisLabel: {
                             rotate: 45,
                             formatter: function(value) {
-                                return value.split(' ')[1];  // 只显示时间部分
+                                return value.split(' ')[1];  
                             }
                         }
                     },
@@ -138,9 +141,8 @@
                 };
                 lvChart.setOption(option);
 
-                // 填充表格
                 const tableBody = document.getElementById('tableBody');
-                uniqueData.forEach(item => {
+                last30Data.forEach(item => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${item.timestamp}</td>
