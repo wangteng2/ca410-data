@@ -40,14 +40,18 @@
 
     <script>
         // 从本地JSON文件加载数据
-        fetch('/measurements.json')
+        fetch('./measurements.json')
             .then(response => response.json())
             .then(data => {
                 // 准备图表数据
                 const timestamps = data.map(item => {
-                    // 将时间戳分成日期和时间两行
                     const [date, time] = item.timestamp.split(' ');
-                    return date + '\n' + time;
+                    return {
+                        value: item.timestamp,
+                        label: {
+                            formatter: [date, time].join('\n')
+                        }
+                    };
                 });
                 const lvValues = data.map(item => item.Lv);
                 const sxValues = data.map(item => item.sx);
@@ -62,7 +66,7 @@
                     tooltip: {
                         trigger: 'axis',
                         formatter: function(params) {
-                            let result = params[0].axisValue + '<br/>';
+                            let result = params[0].name + '<br/>';
                             params.forEach(param => {
                                 let value = param.value;
                                 if(param.seriesName === 'Lv') {
@@ -84,11 +88,12 @@
                     },
                     xAxis: {
                         type: 'category',
-                        data: timestamps,
+                        data: timestamps.map(item => item.value),
                         axisLabel: {
                             rotate: 45,
                             formatter: function (value) {
-                                return value.split('\n').join('\n');
+                                const [date, time] = value.split(' ');
+                                return date + '\n' + time;
                             },
                             interval: 0,
                             lineHeight: 14,
