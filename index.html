@@ -39,7 +39,7 @@
     </div>
 
     <script>
-        fetch('/measurements.json')
+        fetch('measurements.json')
             .then(response => response.json())
             .then(data => {
                 // 过滤掉无效数据和重复数据
