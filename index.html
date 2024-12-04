@@ -42,23 +42,18 @@
         fetch('measurements.json')
             .then(response => response.json())
             .then(data => {
-                // 过滤掉无效数据和重复数据
                 const validData = data.filter(item => 
                     item && 
-                    item.Lv > 0 &&  // 过滤掉 Lv 为 0 的数据
-                    item.sx > 0 &&   // 过滤掉 sx 为 0 的数据
-                    item.sy > 0      // 过滤掉 sy 为 0 的数据
+                    item.Lv > 0 &&  
+                    item.sx > 0 &&   
+                    item.sy > 0      
                 );
-
-                // 去重：根据时间戳去重
                 const uniqueData = Array.from(new Map(
                     validData.map(item => [item.timestamp, item])
                 ).values());
 
-                // 按时间排序
                 uniqueData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                // 准备图表数据
                 const timestamps = uniqueData.map(item => {
                     const [date, time] = item.timestamp.split(' ');
                     return {
@@ -72,7 +67,6 @@
                 const sxValues = uniqueData.map(item => item.sx);
                 const syValues = uniqueData.map(item => item.sy);
 
-                // 配置图表
                 const lvChart = echarts.init(document.getElementById('lvChart'));
                 const option = {
                     title: {
