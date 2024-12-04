@@ -60,10 +60,6 @@
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
                 const lvChart = echarts.init(document.getElementById('lvChart'));
-                lvChart.setOption(option);
-                window.addEventListener('resize', function() {
-                   lvChart.resize();
-                });
                 const option = {
                     title: {
                         text: 'CA410测量结果趋势'
