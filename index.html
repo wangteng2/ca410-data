@@ -52,8 +52,15 @@
     <script>
         let lvChart = null;
 
+        function initChart() {
+            if (lvChart) {
+                lvChart.dispose();
+            }
+            lvChart = echarts.init(document.getElementById('lvChart'));
+        }
+
         function loadData() {
-            fetch('https://github.com/wangteng2/ca410-data/blob/main/measurements.json', {
+            fetch('./measurements.json', {
                 cache: 'no-store',
                 headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -91,28 +98,15 @@
                 const sxValues = last30Data.map(item => item.sx);
                 const syValues = last30Data.map(item => item.sy);
 
-                if (!lvChart) {
-                    lvChart = echarts.init(document.getElementById('lvChart'));
-                }
+                initChart();
+                
                 const option = {
+                    animation: false,
                     title: {
                         text: 'CA410测量结果趋势'
                     },
                     tooltip: {
-                        trigger: 'axis',
-                        formatter: function(params) {
-                            let result = params[0].name + '<br/>';
-                            params.forEach(param => {
-                                let value = param.value;
-                                if(param.seriesName === 'Lv') {
-                                    value = value.toFixed(2) + ' cd/m²';
-                                } else {
-                                    value = value.toFixed(4);
-                                }
-                                result += param.seriesName + ': ' + value + '<br/>';
-                            });
-                            return result;
-                        }
+                        trigger: 'axis'
                     },
                     legend: {
                         data: ['Lv', 'sx', 'sy']
@@ -191,7 +185,7 @@
             loadData();
         }
 
-        loadData();
+        window.addEventListener('load', loadData);
     </script>
 </body>
 </html>
