@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>CA410测量数据</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -10,7 +10,6 @@
             width: 100%; 
             height: 400px; 
             margin: 20px 0; 
-            position: relative;
         }
         .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .data-table th, .data-table td { 
@@ -26,9 +25,7 @@
         <h1>CA410测量数据可视化</h1>
         
         <!-- 图表容器 -->
-        <div class="chart-container">
-            <canvas id="measurementChart"></canvas>
-        </div>
+        <div id="chart_div" class="chart-container"></div>
         
         <!-- 数据表格 -->
         <table class="data-table" id="dataTable">
@@ -46,101 +43,80 @@
     </div>
 
     <script>
-        fetch('./measurements.json')
-            .then(response => response.json())
-            .then(data => {
-                const timestamps = data.map(item => item.timestamp);
-                const lvValues = data.map(item => item.Lv);
-                const sxValues = data.map(item => item.sx);
-                const syValues = data.map(item => item.sy);
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
 
-                const ctx = document.getElementById('measurementChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: timestamps,
-                        datasets: [
-                            {
-                                label: 'Lv (cd/m²)',
-                                data: lvValues,
-                                borderColor: '#5470C6',
-                                yAxisID: 'y',
-                                tension: 0.1
-                            },
-                            {
-                                label: 'sx',
-                                data: sxValues,
-                                borderColor: '#91CC75',
-                                yAxisID: 'y1',
-                                tension: 0.1
-                            },
-                            {
-                                label: 'sy',
-                                data: syValues,
-                                borderColor: '#FAC858',
-                                yAxisID: 'y1',
-                                tension: 0.1
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
+        function drawChart() {
+            fetch('./measurements.json')
+                .then(response => response.json())
+                .then(data => {
+                    const dataTable = new google.visualization.DataTable();
+                    dataTable.addColumn('string', '时间');
+                    dataTable.addColumn('number', 'Lv (cd/m²)');
+                    dataTable.addColumn('number', 'sx');
+                    dataTable.addColumn('number', 'sy');
+
+                    const rows = data.map(item => [
+                        item.timestamp,
+                        item.Lv,
+                        item.sx,
+                        item.sy
+                    ]);
+
+                    dataTable.addRows(rows);
+
+                    const options = {
+                        title: 'CA410测量结果趋势',
+                        curveType: 'function',
+                        legend: { position: 'bottom' },
+                        series: {
+                            0: {targetAxisIndex: 0},
+                            1: {targetAxisIndex: 1},
+                            2: {targetAxisIndex: 1}
                         },
-                        scales: {
-                            y: {
-                                type: 'linear',
-                                display: true,
-                                position: 'left',
-                                title: {
-                                    display: true,
-                                    text: 'Lv (cd/m²)'
-                                }
+                        vAxes: {
+                            0: {
+                                title: 'Lv (cd/m²)',
+                                textStyle: {color: '#5470C6'}
                             },
-                            y1: {
-                                type: 'linear',
-                                display: true,
-                                position: 'right',
-                                min: 0,
-                                max: 1,
-                                title: {
-                                    display: true,
-                                    text: 'sx/sy'
-                                },
-                                grid: {
-                                    drawOnChartArea: false
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                }
+                            1: {
+                                title: 'sx/sy',
+                                viewWindow: {min: 0, max: 1},
+                                textStyle: {color: '#91CC75'}
                             }
+                        },
+                        colors: ['#5470C6', '#91CC75', '#FAC858'],
+                        hAxis: {
+                            slantedText: true,
+                            slantedTextAngle: 45
                         }
-                    }
-                });
+                    };
 
-                // 填充表格数据
-                const tableBody = document.getElementById('tableBody');
-                data.forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.timestamp}</td>
-                        <td>${item.Lv.toFixed(2)}</td>
-                        <td>${item.sx.toFixed(4)}</td>
-                        <td>${item.sy.toFixed(4)}</td>
-                    `;
-                    tableBody.appendChild(row);
+                    const chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+                    chart.draw(dataTable, options);
+
+                    // 填充表格数据
+                    const tableBody = document.getElementById('tableBody');
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.timestamp}</td>
+                            <td>${item.Lv.toFixed(2)}</td>
+                            <td>${item.sx.toFixed(4)}</td>
+                            <td>${item.sy.toFixed(4)}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    document.getElementById('tableBody').innerHTML = 
+                        '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
                 });
-            })
-            .catch(error => {
-                console.error('Error loading data:', error);
-                document.getElementById('tableBody').innerHTML = 
-                    '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
-            });
+        }
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', drawChart);
     </script>
 </body>
 </html>
