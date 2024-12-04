@@ -42,7 +42,6 @@
         fetch('/measurements.json')
             .then(response => response.json())
             .then(data => {
-                // 准备图表数据
                 const timestamps = data.map(item => {
                     const [date, time] = item.timestamp.split(' ');
                     return {
@@ -55,8 +54,6 @@
                 const lvValues = data.map(item => item.Lv);
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
-
-                // Lv和色度图表
                 const lvChart = echarts.init(document.getElementById('lvChart'));
                 const option = {
                     title: {
@@ -83,7 +80,7 @@
                     },
                     grid: {
                         right: '10%',
-                        bottom: '15%'  // 增加底部空间以显示两行时间
+                        bottom: '15%' 
                     },
                     xAxis: {
                         type: 'category',
@@ -155,8 +152,6 @@
                     ]
                 };
                 lvChart.setOption(option);
-
-                // 填充表格
                 const tableBody = document.getElementById('tableBody');
                 data.forEach(item => {
                     const row = document.createElement('tr');
