@@ -90,6 +90,7 @@
                         type: 'category',
                         data: timestamps.map(item => item.value),
                         axisLabel: {
+                            rotate: 45,
                             formatter: function (value) {
                                 const [date, time] = value.split(' ');
                                 return date + '\n' + time;
@@ -177,3 +178,4 @@
     </script>
 </body>
 </html>
+
