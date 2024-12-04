@@ -21,7 +21,7 @@
         <h1>CA410测量数据可视化</h1>
         
         <!-- 图表容器 -->
-        <div id="lineChart" class="chart"></div>
+        <div id="lvChart" class="chart"></div>
         
         <!-- 数据表格 -->
         <table class="data-table" id="dataTable">
@@ -39,8 +39,8 @@
     </div>
 
     <script>
-        // 加载数据并绘制图表
-        fetch('https://wangteng2.github.io/ca410-data/measurements.json')
+        // 从本地JSON文件加载数据
+        fetch('./measurements.json')
             .then(response => response.json())
             .then(data => {
                 // 准备图表数据
@@ -49,8 +49,8 @@
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
 
-                // 配置图表
-                const chart = echarts.init(document.getElementById('lineChart'));
+                // Lv和色度图表
+                const lvChart = echarts.init(document.getElementById('lvChart'));
                 const option = {
                     title: {
                         text: 'CA410测量结果趋势'
@@ -74,22 +74,40 @@
                     legend: {
                         data: ['Lv', 'sx', 'sy']
                     },
+                    grid: {
+                        right: '10%'
+                    },
                     xAxis: {
                         type: 'category',
-                        data: timestamps
+                        data: timestamps,
+                        axisLabel: {
+                            rotate: 45
+                        }
                     },
                     yAxis: [
                         {
                             type: 'value',
                             name: 'Lv (cd/m²)',
-                            position: 'left'
+                            position: 'left',
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#5470C6'
+                                }
+                            }
                         },
                         {
                             type: 'value',
                             name: 'sx/sy',
                             position: 'right',
                             min: 0,
-                            max: 1
+                            max: 1,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#91CC75'
+                                }
+                            }
                         }
                     ],
                     series: [
@@ -97,23 +115,32 @@
                             name: 'Lv',
                             type: 'line',
                             data: lvValues,
-                            yAxisIndex: 0
+                            yAxisIndex: 0,
+                            itemStyle: {
+                                color: '#5470C6'
+                            }
                         },
                         {
                             name: 'sx',
                             type: 'line',
                             data: sxValues,
-                            yAxisIndex: 1
+                            yAxisIndex: 1,
+                            itemStyle: {
+                                color: '#91CC75'
+                            }
                         },
                         {
                             name: 'sy',
                             type: 'line',
                             data: syValues,
-                            yAxisIndex: 1
+                            yAxisIndex: 1,
+                            itemStyle: {
+                                color: '#FAC858'
+                            }
                         }
                     ]
                 };
-                chart.setOption(option);
+                lvChart.setOption(option);
 
                 // 填充表格
                 const tableBody = document.getElementById('tableBody');
@@ -128,7 +155,10 @@
                     tableBody.appendChild(row);
                 });
             })
-            .catch(error => console.error('Error loading data:', error));
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
+            });
     </script>
 </body>
 </html>
