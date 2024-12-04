@@ -59,16 +59,11 @@
                 const lvValues = data.map(item => item.Lv);
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
-                try {
-                   const lvChart = echarts.init(document.getElementById('lvChart'));
-                   lvChart.setOption(option);
-
-                   window.addEventListener('resize', function() {
+                const lvChart = echarts.init(document.getElementById('lvChart'));
+                lvChart.setOption(option);
+                window.addEventListener('resize', function() {
                    lvChart.resize();
-                   });
-               } catch (error) {
-               console.error('Chart initialization error:', error);
-               }
+                });
                 const option = {
                     title: {
                         text: 'CA410测量结果趋势'
