@@ -39,7 +39,7 @@
     </div>
 
     <script>
-        fetch('https://github.com/wangteng2/ca410-data/blob/main/measurements.json')
+        fetch('/measurements.json')
             .then(response => response.json())
             .then(data => {
                 // 准备图表数据
