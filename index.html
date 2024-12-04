@@ -44,7 +44,11 @@
             .then(response => response.json())
             .then(data => {
                 // 准备图表数据
-                const timestamps = data.map(item => item.timestamp);
+                const timestamps = data.map(item => {
+                    // 将时间戳分成日期和时间两行
+                    const [date, time] = item.timestamp.split(' ');
+                    return date + '\n' + time;
+                });
                 const lvValues = data.map(item => item.Lv);
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
@@ -75,13 +79,20 @@
                         data: ['Lv', 'sx', 'sy']
                     },
                     grid: {
-                        right: '10%'
+                        right: '10%',
+                        bottom: '15%'  // 增加底部空间以显示两行时间
                     },
                     xAxis: {
                         type: 'category',
                         data: timestamps,
                         axisLabel: {
-                            rotate: 45
+                            rotate: 45,
+                            formatter: function (value) {
+                                return value.split('\n').join('\n');
+                            },
+                            interval: 0,
+                            lineHeight: 14,
+                            padding: [5, 0, 0, 0]
                         }
                     },
                     yAxis: [
