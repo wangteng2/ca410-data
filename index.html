@@ -39,9 +39,21 @@
     </div>
 
     <script>
-        fetch('/measurements.json')
-            .then(response => response.json())
+        // 从本地JSON文件加载数据
+        fetch('measurements.json')
+            .then(response => {
+                console.log('响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP 错误! 状态: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('加载的数据:', data);
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('数据格式不正确或为空');
+                }
+                // 准备图表数据
                 const timestamps = data.map(item => {
                     const [date, time] = item.timestamp.split(' ');
                     return {
@@ -54,6 +66,8 @@
                 const lvValues = data.map(item => item.Lv);
                 const sxValues = data.map(item => item.sx);
                 const syValues = data.map(item => item.sy);
+
+                // Lv和色度图表
                 const lvChart = echarts.init(document.getElementById('lvChart'));
                 const option = {
                     title: {
@@ -80,12 +94,13 @@
                     },
                     grid: {
                         right: '10%',
-                        bottom: '15%' 
+                        bottom: '15%'  // 增加底部空间以显示两行时间
                     },
                     xAxis: {
                         type: 'category',
                         data: timestamps.map(item => item.value),
                         axisLabel: {
+                            rotate: 45,
                             formatter: function (value) {
                                 const [date, time] = value.split(' ');
                                 return date + '\n' + time;
@@ -152,6 +167,8 @@
                     ]
                 };
                 lvChart.setOption(option);
+
+                // 填充表格
                 const tableBody = document.getElementById('tableBody');
                 data.forEach(item => {
                     const row = document.createElement('tr');
@@ -165,10 +182,14 @@
                 });
             })
             .catch(error => {
-                console.error('Error loading data:', error);
-                document.getElementById('tableBody').innerHTML = '<tr><td colspan="4">加载数据时出错，请确保 measurements.json 文件存在且格式正确</td></tr>';
+                console.error('错误详情:', error);
+                // 在页面上显示错误信息
+                document.querySelector('.container').innerHTML += `
+                    <div style="color: red; margin-top: 20px;">
+                        数据加载失败: ${error.message}
+                    </div>
+                `;
             });
     </script>
 </body>
 </html>
-
